@@ -129,4 +129,4 @@ pip install -r requirements.txt
 
 ## 📄 Licencia
 
-Este proyecto está bajo la **Licencia MIT**. Puedes ver el texto completo en el archivo [`LICENSE.md`](./LICENSE)
+Este proyecto está bajo la **Licencia MIT**. Puedes ver el texto completo en el archivo [`LICENSE`](./LICENSE)
