@@ -1,7 +1,3 @@
-Ya he generado la versión final del `README.md` con la licencia MIT y las actualizaciones de uso que hemos discutido. Aquí está el texto completo, listo para ser copiado y pegado en un archivo llamado `README.md` en la raíz de tu proyecto.
-
------
-
 # 🥋 TKCAP - Character Capture & Recognition
 
 TKCAP es una herramienta en Python para **capturar fotogramas de partidas de juegos de lucha** y reconocer automáticamente el personaje que aparece en cada lado de la pantalla.
