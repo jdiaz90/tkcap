@@ -1,0 +1,10 @@
+{
+  "carpeta_frames": "frames",
+  "carpeta_debug": "debug",
+  "resolucion": [2560, 1440],
+  "offset_segundos": 3.0,
+  "coordenadas": {
+    "izquierda": [66, 1044, 236, 1092],
+    "derecha":   [1542, 2520, 236, 1092]
+  }
+}
