@@ -1,6 +1,8 @@
-import os, cv2
+import os
+
+import cv2
 import numpy as np
-from datetime import datetime
+
 
 class IdentificadorPersonaje:
     def __init__(self, carpeta_referencias, umbral=0.90):
@@ -10,37 +12,67 @@ class IdentificadorPersonaje:
         self.cargar_referencias()
 
     def cargar_referencias(self):
-        self.referencias.clear()
+        """Carga todas las imágenes; el nombre de la carpeta identifica al personaje."""
+        referencias = {}
         os.makedirs(self.carpeta_referencias, exist_ok=True)
-        for personaje in os.listdir(self.carpeta_referencias):
-            ruta_pj = os.path.join(self.carpeta_referencias, personaje)
-            if os.path.isdir(ruta_pj):
-                self.referencias[personaje] = []
-                for archivo in os.listdir(ruta_pj):
-                    if archivo.lower().endswith((".png", ".jpg", ".jpeg")):
-                        img = cv2.imread(os.path.join(ruta_pj, archivo))
-                        if img is not None:
-                            self.referencias[personaje].append(img)
+
+        with os.scandir(self.carpeta_referencias) as personajes:
+            for entrada in personajes:
+                if not entrada.is_dir():
+                    continue
+
+                imagenes = []
+                with os.scandir(entrada.path) as archivos:
+                    for archivo in archivos:
+                        if archivo.is_file() and archivo.name.lower().endswith((".png", ".jpg", ".jpeg")):
+                            img = cv2.imread(archivo.path)
+                            if img is not None:
+                                imagenes.append(img)
+                referencias[entrada.name] = imagenes
+
+        # Sustitución al final: nunca deja el banco en un estado parcialmente cargado.
+        self.referencias = referencias
+
+    def agregar_referencia(self, nombre, imagen):
+        """Añade a memoria una referencia recién guardada, sin recargar el banco."""
+        if imagen is None:
+            return
+        self.referencias.setdefault(nombre, []).append(imagen.copy())
 
     def identificar(self, recorte):
         if recorte is None or not self.referencias:
             return None, 0.0
 
-        # 🔹 Filtro previo para descartar frames negros o uniformes
-        brillo_medio = np.mean(recorte)
-        varianza_pix = np.var(recorte)
+        brillo_medio = float(np.mean(recorte))
+        varianza_pix = float(np.var(recorte))
         if brillo_medio < 5 or varianza_pix < 50:
             return None, 0.0
 
-        mejor_nombre, mejor_score = None, -1
+        mejor_nombre, mejor_score = None, -1.0
+        # El recorte original no se modifica. Si hay varios tamaños de plantilla,
+        # cada variante redimensionada parte siempre de la imagen original.
+        recortes_por_tamano = {}
+        forma_original = recorte.shape[:2]
+
         for nombre, lista_imgs in self.referencias.items():
             for ref_bgr in lista_imgs:
-                if recorte.shape != ref_bgr.shape:
-                    recorte = cv2.resize(recorte, (ref_bgr.shape[1], ref_bgr.shape[0]))
-                res = cv2.matchTemplate(ref_bgr, recorte, cv2.TM_CCOEFF_NORMED)
+                alto_ref, ancho_ref = ref_bgr.shape[:2]
+                clave = (ancho_ref, alto_ref)
+
+                if clave not in recortes_por_tamano:
+                    if forma_original == (alto_ref, ancho_ref):
+                        recortes_por_tamano[clave] = recorte
+                    else:
+                        recortes_por_tamano[clave] = cv2.resize(
+                            recorte, clave, interpolation=cv2.INTER_LINEAR
+                        )
+
+                muestra = recortes_por_tamano[clave]
+                res = cv2.matchTemplate(ref_bgr, muestra, cv2.TM_CCOEFF_NORMED)
                 _, max_val, _, _ = cv2.minMaxLoc(res)
-                if max_val > mejor_score:
-                    mejor_score, mejor_nombre = max_val, nombre
+                score = float(max_val)
+                if score > mejor_score:
+                    mejor_score, mejor_nombre = score, nombre
 
         if mejor_score >= self.umbral:
             return mejor_nombre, mejor_score
